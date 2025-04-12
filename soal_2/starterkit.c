@@ -63,7 +63,6 @@ void delete_zip() {
     run_command(rm_argv);
 }
 
-// === Base64 decode helper ===
 int base64_char(char c) {
     if ('A' <= c && c <= 'Z') return c - 'A';
     if ('a' <= c && c <= 'z') return c - 'a' + 26;
@@ -91,26 +90,6 @@ int base64_decode(const char *input, unsigned char *output) {
     output[out_len] = '\0';
     return out_len;
 }
-
-// void move_files(const char *from_dir, const char *to_dir) {
-//     DIR *dir = opendir(from_dir);
-//     if (!dir) return;
-
-//     mkdir(to_dir, 0755);
-
-//     struct dirent *entry;
-//     char src_path[512], dst_path[512];
-
-//     while ((entry = readdir(dir)) != NULL) {
-//         if (entry->d_type != DT_REG) continue;
-
-//         snprintf(src_path, sizeof(src_path), "%s/%s", from_dir, entry->d_name);
-//         snprintf(dst_path, sizeof(dst_path), "%s/%s", to_dir, entry->d_name);
-//         rename(src_path, dst_path);
-//     }
-
-//     closedir(dir);
-// }
 
 void move_files(const char *src_dir, const char *dst_dir) {
     mkdir(dst_dir, 0755);
@@ -150,24 +129,6 @@ void quarantine_files() {
 void return_files() {
     move_files(QUARANTINE_DIR, EXTRACT_DIR);
 }
-
-// void eradicate_files() {
-//     DIR *dir = opendir(QUARANTINE_DIR);
-//     if (!dir) return;
-
-//     struct dirent *entry;
-//     char filepath[512];
-
-//     while ((entry = readdir(dir)) != NULL) {
-//         if (entry->d_type != DT_REG) continue;
-
-//         snprintf(filepath, sizeof(filepath), "%s/%s", QUARANTINE_DIR, entry->d_name);
-//         remove(filepath);
-//     }
-
-//     closedir(dir);
-// }
-
 void eradicate_files() {
     DIR *dir = opendir(QUARANTINE_DIR);
     if (!dir) {
@@ -220,7 +181,6 @@ void decrypt_and_move_files() {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type != DT_REG) continue;
 
-        // Filter nama base64: panjang kelipatan 4 dan hanya karakter valid
         int len = strlen(entry->d_name);
         if (len % 4 != 0) continue;
 
@@ -234,12 +194,10 @@ void decrypt_and_move_files() {
         }
         if (!valid) continue;
 
-        // Base64 decode
         snprintf(src_path, sizeof(src_path), "%s/%s", EXTRACT_DIR, entry->d_name);
         int out_len = base64_decode(entry->d_name, decoded);
         if (out_len <= 0) continue;
 
-        // Hapus newline (jika ada)
         if (decoded[out_len - 1] == '\n') decoded[out_len - 1] = '\0';
 
         snprintf(dst_path, sizeof(dst_path), "%s/%s", QUARANTINE_DIR, decoded);
@@ -261,31 +219,9 @@ void daemon_loop() {
     mkdir(QUARANTINE_DIR, 0755);
     while (1) {
         decrypt_and_move_files();
-        sleep(5); // cek setiap 5 detik
+        sleep(5);
     }
 }
-
-// void shutdown_daemon() {
-//     FILE *fp = fopen(PID_FILE, "r");
-//     if (!fp) {
-//         fprintf(stderr, "[!] PID file not found. Is daemon running?\n");
-//         return;
-//     }
-
-//     int pid;
-//     if (fscanf(fp, "%d", &pid) != 1) {
-//         fprintf(stderr, "[!] Failed to read PID.\n");
-//         fclose(fp);
-//         return;
-//     }
-//     fclose(fp);
-
-//     if (kill(pid, SIGTERM) == 0) {
-//         remove(PID_FILE); // bersihkan file PID
-//     } else {
-//         perror("[!] Failed to terminate daemon");
-//     }
-// }
 
 void shutdown_daemon() {
     FILE *fp = fopen(PID_FILE, "r");
