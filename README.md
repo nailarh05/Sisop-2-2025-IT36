@@ -5,7 +5,7 @@ Anggota Kelompok
 |-----       | -----                            |
 |5027241106  | Mohammad Abyan Ranuaji           |
 |5027241078  | Naila Raniyah Hanan              |
-|5027241119  | Brilian Gibran Yohanes Salossa   |
+
 
 - [Soal & Penjelasan](#Soal&penjelasan)
   - [Soal 1](#soal-1)
