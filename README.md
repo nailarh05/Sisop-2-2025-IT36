@@ -149,13 +149,8 @@ Shutdown:
 
 
 Contoh struktur akhir directory untuk soal ini adalah sebagai berikut.
-soal_2
-    ├── activity.log
-    ├── quarantine
-    ├── starter_kit
-    │           └── <file hasil unzip>
-    ├── starterkit
-    └── starterkit.c
+
+  ![Image](https://github.com/user-attachments/assets/fce6706f-b0b8-4f3b-a8de-e5fcedecdb50)
 
 3. Dok dok dorokdok dok rodok. Anomali malware yang dikembangkan oleh Andriana di PT Mafia Security Cabang Ngawi yang hanya keluar di malam pengerjaan soal shift modul 2. Konon katanya anomali ini akan mendatangi praktikan sisop yang tidak mengerjakan soal ini. Ihh takutnyeee.
 
@@ -174,7 +169,7 @@ soal_2
   g. Lalu mine-crafter-XX dan mengumpulkan hash yang sudah dibuat dan menyimpannya di dalam file /tmp/.miner.log dengan format: 
 [YYYY-MM-DD hh:mm:ss][Miner XX] hash, Dimana XX adalah ID mine-crafter yang membuat hash tersebut.
 
-  ![Image](https://github.com/user-attachments/assets/6f28ba91-8774-47f6-b71f-358979ce1704)
+  ![Image](https://github.com/user-attachments/assets/1cca1dee-bf7c-4a09-943b-a5772ebb0e1f)
 
   h. Karena mine-crafter-XX adalah anak dari rodok.exe, saat rodok.exe dimatikan, maka seluruh mine-crafter-XX juga akan mati. 
 
