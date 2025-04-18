@@ -232,7 +232,7 @@ Sebagai dokumentasi untuk mengetahui apa saja yang debugmon lakukan di komputer 
 Untuk poin b, c, dan e, status proses adalah RUNNING. Sedangkan untuk poin d, status proses adalah FAILED.
 
 
-### Soal 1**
+### Soal 1
 
   ## Script action.c
 
