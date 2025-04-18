@@ -402,8 +402,10 @@ void show_usage(char *program_name) {
 
 
 ### Soal 2**
-a. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah melakukan unzip.
-b. mendeycrp
+a&b. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah melakukan unzip.& mendecrypt nama file yang ada di dalamnya.
+c.memindahkan file yang ada pada directory starter kit ke directory karantina, dan begitu juga sebaliknya.
+d. menghapus seluruh file yang ada di dalam directory karantina.
+
  
 ### Soal 4**
 a. ./debugmon list <user> akan menampilkan daftar semua proses yang sedang berjalan pada user tersebut  beserta PID, command, CPU usage, dan memory usage.
@@ -418,10 +420,58 @@ else if (argc == 3 && strcmp(argv[1], "list") == 0) {
 
 b. menjalankan command ./debugmon daemon <user> maka debugmon akan jalan secara daemon dan isi dari file log bertambah dalam rentang waktu tertentu.
 ```
-else if (argc == 3 && strcmp(argv[1], "daemon") == 0) {
-    jd_daemon();
-    pantau(argv[2], 0);
+void pantau(const char *user, int mode) {
+    uid_t uid = cari_uid(user);
+
+    while (1) {
+        DIR *d = opendir(PROC);
+        if (!d) {
+            sleep(5);
+            continue;
+        }
+
+        struct dirent *e;
+        while ((e = readdir(d))) {
+            if (!angka_doang(e->d_name)) continue;
+
+            int pid = atoi(e->d_name);
+            char path[256], line[256], nama[256] = "-";
+            FILE *f;
+            uid_t uidp;
+
+            snprintf(path, sizeof(path), PROC"/%d/status", pid);
+            f = fopen(path, "r");
+            if (!f) continue;
+
+            while (fgets(line, sizeof(line), f)) {
+                if (sscanf(line, "Uid: %d", &uidp) == 1) break;
+            }
+            fclose(f);
+
+            if (uidp != uid) continue;
+
+            snprintf(path, sizeof(path), PROC"/%d/comm", pid);
+            f = fopen(path, "r");
+            if (f) {
+                fgets(nama, sizeof(nama), f);
+                nama[strcspn(nama, "\n")] = 0;
+                fclose(f);
+            }
+
+            if (strcmp(nama, "debugmon") == 0) {
+                tulis_log_ok(nama);
+            } else if (mode) {
+                if (kill(pid, SIGKILL) == 0) {
+                    tulis_log_fail(nama);
+                }
+            }
+        }
+
+        closedir(d);
+        sleep(5);
+    }
 }
+
 
 ```
 ![Screenshot 2025-04-17 134334](https://github.com/user-attachments/assets/65006d84-5b8e-4b65-a6cf-49be34af06ff)
@@ -430,23 +480,91 @@ else if (argc == 3 && strcmp(argv[1], "daemon") == 0) {
 
 c. debugmon stop seharusnya dia akan menghetikan si daemon dan jika sudah di hentikan tidak bakal muncul.
 ```
-else if (argc == 3 && strcmp(argv[1], "stop") == 0 || strcmp(argv[1], "revert") == 0) {
-    stop_mon(argv[2]);
-}
+void stop_mon(const char *user) {
+    DIR *d = opendir(PROC);
+    if (!d) return;
+
+    struct dirent *e;
+    uid_t uid = cari_uid(user);
+
+    while ((e = readdir(d))) {
+        if (!angka_doang(e->d_name)) continue;
+
+        int pid = atoi(e->d_name);
+        char path[256], line[1024], exepath[256], real[256];
+        uid_t uidp;
+
+        snprintf(path, sizeof(path), PROC"/%d/status", pid);
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+
+        while (fgets(line, sizeof(line), f)) {
+            if (sscanf(line, "Uid: %d", &uidp) == 1) break;
+        }
+        fclose(f);
+        if (uidp != uid) continue;
+
+        snprintf(exepath, sizeof(exepath), PROC"/%d/exe", pid);
+        ssize_t len = readlink(exepath, real, sizeof(real) - 1);
+        if (len == -1) continue;
+        real[len] = '\0';
+
+        if (!strstr(real, "debugmon")) continue;
+
+        if (kill(pid, SIGTERM) == 0) {
+            printf("Stop debugmon (PID %d) user %s\n", pid, user);
+        } else {
+            perror("gagal stop");
+        }
+    }
 
 ```
 ![Screenshot 2025-04-17 135012](https://github.com/user-attachments/assets/9f6059db-f334-4909-8971-1a349258816a)
 
 d. jika command fail di jalankan, maka user tersebut akan terblock dan tidak bisa melakukan apa-apa, dan pada log juga akan mencatat dengan setatus FAILED.
 ```
-else if (argc == 3 && strcmp(argv[1], "fail") == 0) {
-    jd_daemon();
-    pantau(argv[2], 1);
+void tulis_log_fail(const char *nama) {
+    FILE *f = fopen(LOGF, "a");
+    if (!f) return;
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char waktu[64];
+    strftime(waktu, sizeof(waktu), "[%d:%m:%Y]-[%H:%M:%S]", tm);
+    fprintf(f, "%s_%s_FAILED\n", waktu, nama);
+    fclose(f);
+}
+
+void tulis_log_ok(const char *nama) {
+    FILE *f = fopen(LOGF, "a");
+    if (!f) return;
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char waktu[64];
+    strftime(waktu, sizeof(waktu), "[%d:%m:%Y]-[%H:%M:%S]", tm);
+    fprintf(f, "%s_%s_RUNNING\n", waktu, nama);
+    fclose(f);
+}
+
+void jd_daemon() {
+    pid_t p = fork();
+    if (p < 0) exit(1);
+    if (p > 0) exit(0);
+    setsid();
+    umask(0);
+    chdir("/home/ywwzz/Sisop-2-2025-IT36/soal_4");
+
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    open("/dev/null", O_RDONLY);
+    open("/dev/null", O_WRONLY);
+    open("/dev/null", O_RDWR);
 }
 
 ```
 
-e. ./debugmon revert untuk mnegembalikan user agar tidak terblock dan bisa menggunakan terminal kembai.
+e. ./debugmon revert untuk mnegembalikan user agar tidak terblock dan bisa menggunakan terminal kembali.
 ```
 else if (argc == 3 && strcmp(argv[1], "stop") == 0 || strcmp(argv[1], "revert") == 0) {
     stop_mon(argv[2]);
