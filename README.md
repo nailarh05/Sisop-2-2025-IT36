@@ -100,6 +100,151 @@ Berikut contoh struktur directory akhir:
 Notes: Berikan error handling yakni memberi tahu command yang benar jika salah argumen.
 
 
+2. Ada seorang perempuan nolep yang bernama Kanade Yoisaki. Beliau adalah siswi SMA yang mengambil kelas online (tipsen dulu ygy) karena malas sekali untuk keluar rumah. Sebagai gantinya, ia bekerja sebagai seorang composer dan hanya tinggal di dalam rumah saja untuk membuat musik secara terus - menerus. Berkat usahanya, musik ciptaan Kanade pun mulai terkenal dan akhirnya Kanade pun membuat sebuah grup musik bernama 25-ji, Nightcord de., atau yang biasa dikenal dengan N25 atau Niigo.
+
+Pada suatu hari, Kanade ingin membuat sebuah musik baru beserta dengan anggota grup musik lainnya, yaitu Mizuki Akiyama, Mafuyu Asahina, dan Ena Shinonome. Namun sialnya, komputer Kanade terkena sebuah virus yang tidak diketahui. Setelah dianalisis oleh Kanade sendiri, ternyata virus ini bukanlah sebuah trojan, ransomware, maupun tipe virus berbahaya lainnya, melainkan hanya sebuah malware biasa yang hanya bisa membuat sebuah perangkat menjadi lebih lambat dari biasanya.
+
+  a. Sebagai teman yang baik, Mafuyu merekomendasikan Kanade untuk mendownload dan unzip sebuah starter kit berisi file - file acak (sudah termasuk virus) melalui link berikut agar dapat membantu Kanade dalam mengidentifikasi virus - virus yang akan datang. Jangan lupa untuk menghapus file zip asli setelah melakukan unzip.
+
+  b. Setelah mendownload starter kit tersebut, Mafuyu ternyata lupa bahwa pada starter kit tersebut, tidak ada alat untuk mendecrypt nama dari file yang diencrypt menggunakan algoritma Base64. Oleh karena itu, bantulah Mafuyu untuk membuat sebuah directory karantina yang dapat mendecrypt nama file yang ada di dalamnya (Hint: gunakan daemon).
+  
+Penggunaan:
+./starterkit --decrypt
+
+  c. Karena Kanade adalah orang yang sangat pemalas (kecuali jika membuat musik), maka tambahkan juga fitur untuk memindahkan file yang ada pada directory starter kit ke directory karantina, dan begitu juga sebaliknya.
+  
+Penggunaan:
+./starterkit --quarantine (pindahkan file dari directory starter kit ke karantina)
+./starterkit --return (pindahkan file dari directory karantina ke starter kit)
+
+  d. Ena memberikan ide kepada mereka untuk menambahkan fitur untuk menghapus file - file yang ada pada directory karantina. Mendengar ide yang bagus tersebut, Kanade pun mencoba untuk menambahkan fitur untuk menghapus seluruh file yang ada di dalam directory karantina.
+  
+Penggunaan:
+./starterkit --eradicate 
+
+  e. Karena tagihan listrik Kanade sudah membengkak dan tidak ingin komputernya menyala secara terus - menerus, ia ingin program decrypt nama file miliknya dapat dimatikan secara aman berdasarkan PID dari proses program tersebut.
+  
+Penggunaan:
+./starterkit --shutdown
+
+  f. Mafuyu dan Kanade juga ingin program mereka dapat digunakan dengan aman dan nyaman tanpa membahayakan penggunanya sendiri, mengingat Mizuki yang masih linglung setelah keluar dari labirin Santerra De Laponte. Oleh karena itu, tambahkan error handling sederhana untuk mencegah penggunaan yang salah pada program tersebut.
+
+  g. Terakhir, untuk mencatat setiap penggunaan program ini, Kanade beserta Mafuyu ingin menambahkan log dari setiap penggunaan program ini dan menyimpannya ke dalam file bernama activity.log.
+  
+Format:
+Decrypt: 
+[dd-mm-YYYY][HH:MM:SS] - Successfully started decryption process with PID <pid>.
+
+Quarantine:
+[dd-mm-YYYY][HH:MM:SS] - <nama file> - Successfully moved to quarantine directory.
+
+Return:
+[dd-mm-YYYY][HH:MM:SS] - <nama file> - Successfully returned to starter kit directory.
+
+Eradicate:
+[dd-mm-YYYY][HH:MM:SS] - <nama file> - Successfully deleted.
+
+Shutdown:
+[dd-mm-YYYY][HH:MM:SS] - Successfully shut off decryption process with PID <pid>.
+
+
+Contoh struktur akhir directory untuk soal ini adalah sebagai berikut.
+soal_2
+    ├── activity.log
+    ├── quarantine
+    ├── starter_kit
+    │           └── <file hasil unzip>
+    ├── starterkit
+    └── starterkit.c
+
+3. Dok dok dorokdok dok rodok. Anomali malware yang dikembangkan oleh Andriana di PT Mafia Security Cabang Ngawi yang hanya keluar di malam pengerjaan soal shift modul 2. Konon katanya anomali ini akan mendatangi praktikan sisop yang tidak mengerjakan soal ini. Ihh takutnyeee.
+
+  a. Malware ini bekerja secara daemon dan menginfeksi perangkat korban dan menyembunyikan diri dengan mengganti namanya menjadi /init.
+
+  b. Anak fitur pertama adalah sebuah encryptor bernama wannacryptor yang akan memindai directory saat ini dan mengenkripsi file dan folder (serta seluruh isi folder) di dalam directory tersebut menggunakan xor dengan timestamp saat program dijalankan. Encryptor pada folder dapat bekerja dengan dua cara, mengenkripsi seluruh isi folder secara rekursif, atau mengubah folder dan isinya ke dalam zip lalu mengenkripsi zip tersebut. Jika menggunakan metode rekursif, semua file di dalam folder harus terenkripsi , dari isi folder paling dalam sampai ke current directory, dan tidak mengubah struktur folder Jika menggunakan metode zip, folder yang dienkripsi harus dihapus oleh program. Pembagian metode sebagai berikut: Untuk kelompok ganjil menggunakan metode rekursif, dan kelompok genap menggunakan metode zip.
+
+  c. Anak fitur kedua yang bernama trojan.wrm berfungsi untuk menyebarkan malware ini kedalam mesin korban dengan cara membuat salinan binary malware di setiap directory yang ada di home user.
+
+  d. Anak fitur pertama dan kedua terus berjalan secara berulang ulang selama malware masih hidup dengan interval 30 detik.
+
+  e. Anak fitur ketiga ini sangat unik. Dinamakan rodok.exe, proses ini akan membuat sebuah fork bomb di dalam perangkat korban.
+
+  f. Konon katanya malware ini dibuat oleh Andriana karena dia sedang memerlukan THR. Karenanya, Andriana menambahkan fitur pada fork bomb tadi dimana setiap fork dinamakan mine-crafter-XX (XX adalah nomor dari fork, misal fork pertama akan menjadi mine-crafter-0) dan tiap fork akan melakukan cryptomining. Cryptomining disini adalah membuat sebuah hash hexadecimal (base 16) random sepanjang 64 char. Masing masing hash dibuat secara random dalam rentang waktu 3 detik - 30 detik. Sesuaikan jumlah maksimal mine-crafter dengan spesifikasi perangkat, minimal 3 (Jangan dipaksakan sampai lag, secukupnya saja untuk demonstrasi)
+
+  g. Lalu mine-crafter-XX dan mengumpulkan hash yang sudah dibuat dan menyimpannya di dalam file /tmp/.miner.log dengan format: 
+[YYYY-MM-DD hh:mm:ss][Miner XX] hash, Dimana XX adalah ID mine-crafter yang membuat hash tersebut.
+
+  ![Image](https://github.com/user-attachments/assets/6f28ba91-8774-47f6-b71f-358979ce1704)
+
+  h. Karena mine-crafter-XX adalah anak dari rodok.exe, saat rodok.exe dimatikan, maka seluruh mine-crafter-XX juga akan mati. 
+
+Nama anak anak diatas adalah nama proses yang akan berjalan. Mengganti nama proses berarti saat dilakukan pemeriksaan proses berjalan (seperti ps aux dan lainnya), maka proses tersebut akan muncul dengan nama yang ditentukan.
+
+  ![Image](https://github.com/user-attachments/assets/d1a5fd6c-04ed-49b7-a625-fd0199d9e72e)
+
+Perhatikan hubungan ppid dan pid dari process-process tersebut
+
+Disarankan untuk meng-compile program dengan nama runme. Command ini dapat digunakan jika ingin menghapus file yang terbuat oleh fungsi multiply:
+
+find ~ -name "runme" -type f -delete
+
+PERINGATAN: Karena program ini berpotensi membahayakan perangkat praktikan, buatlah sebuah folder kosong baru di directory home dan gunakan folder di dalam zip ini untuk memperagakan sub soal c (contoh program diletakkan di /home/user/new-folder/test atau /tmp/sisop/test dengan test adalah folder yang sudah di-extract dari zip tersebut). Disarankan untuk menggunakan isolated environment (seperti VM) saat menjalankan soal ini. Jangan jalankan program ini di dalam directory vital seperti “/home/user”, “/” dll. Setelah selesai menjalankan program ini, pastikan semua process yang dibuat sudah mati.
+
+4. Suatu hari, Nobita menemukan sebuah alat aneh di laci mejanya. Alat ini berbentuk robot kecil dengan mata besar yang selalu berkedip-kedip. Doraemon berkata, "Ini adalah Debugmon! Robot super kepo yang bisa memantau semua aktivitas di komputer!" Namun, alat ini harus digunakan dengan hati-hati. Jika dipakai sembarangan, bisa-bisa komputer Nobita malah error total! 😱
+
+   a. Mengetahui semua aktivitas user
+   
+Doraemon ingin melihat apa saja yang sedang dijalankan user di komputernya. Maka, dia mengetik:
+
+./debugmon list <user>
+
+Debugmon langsung menampilkan daftar semua proses yang sedang berjalan pada user tersebut beserta PID, command, CPU usage, dan memory usage.
+
+  b. Memasang mata-mata dalam mode daemon
+  
+Doraemon ingin agar Debugmon terus memantau user secara otomatis. Doraemon pun menjalankan program ini secara daemon dan melakukan pencatatan ke dalam file log dengan menjalankan:
+
+./debugmon daemon <user>
+
+  c. Menghentikan pengawasan
+
+User mulai panik karena setiap gerak-geriknya diawasi! Dia pun memohon pada Doraemon untuk menghentikannya dengan:
+
+./debugmon stop <user>
+
+  d. Menggagalkan semua proses user yang sedang berjalan
+  
+Doraemon yang iseng ingin mengerjai user dengan mengetik:
+
+./debugmon fail <user>
+
+Debugmon langsung menggagalkan semua proses yang sedang berjalan dan menulis status proses ke dalam file log dengan status FAILED. Selain menggagalkan, user juga tidak bisa menjalankan proses lain dalam mode ini.
+
+  e. Mengizinkan user untuk kembali menjalankan proses
+  
+Karena kasihan, Shizuka meminta Doraemon untuk memperbaiki semuanya. Doraemon pun menjalankan:
+
+./debugmon revert <user>
+
+Debugmon kembali ke mode normal dan bisa menjalankan proses lain seperti biasa.
+
+  f. Mencatat ke dalam file log
+  
+Sebagai dokumentasi untuk mengetahui apa saja yang debugmon lakukan di komputer user, debugmon melakukan pencatatan dan penyimpanan ke dalam file debugmon.log untuk semua proses yang dijalankan dengan format
+
+[dd:mm:yyyy]-[hh:mm:ss]_nama-process_STATUS(RUNNING/FAILED)
+
+Untuk poin b, c, dan e, status proses adalah RUNNING. Sedangkan untuk poin d, status proses adalah FAILED.
+
+
+
+
+
+
+
+
+
+
 
 ### Soal 2**
 a. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah melakukan unzip.
