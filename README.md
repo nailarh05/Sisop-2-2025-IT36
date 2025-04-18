@@ -232,10 +232,170 @@ Sebagai dokumentasi untuk mengetahui apa saja yang debugmon lakukan di komputer 
 Untuk poin b, c, dan e, status proses adalah RUNNING. Sedangkan untuk poin d, status proses adalah FAILED.
 
 
+### Soal 1**
 
+  ## Script action.c
 
+a.) Header dan Include Library
+```
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <dirent.h>
+#include <ctype.h>
+#include <fcntl.h>
+```
+  - #include directives: Mengimpor library yang diperlukan untuk:
+    - Operasi I/O (stdio.h), manajemen memori (stdlib.h), dan manipulasi string (string.h).
+    - System calls (unistd.h), manajemen proses (sys/wait.h), dan direktori (dirent.h).
+    - Pengecekan tipe karakter (ctype.h) dan operasi file (fcntl.h).
 
+b.) Deklarasi Fungsi
+```
+void download_and_extract();
+void filter_files();
+void combine_files();
+void decode_file();
+void show_usage(char *program_name);
+int is_directory_exists(const char *path);
+int is_file_exists(const char *path);
+void execute_command(char *argv[]);
+```
+  - Fungsi Utama
+    - download_and_extract(): Unduh dan ekstrak file Clues.zip.
+    - filter_files(): Filter file dengan format nama tertentu.
+    - combine_files(): Gabungkan file yang sudah difilter.
+    - decode_file(): Dekode isi file menggunakan ROT13.
 
+  - Fungsi Pendukung
+    - is_directory_exists(): Cek keberadaan direktori.
+    - is_file_exists(): Cek keberadaan file.
+    - execute_command(): Eksekusi perintah shell.
+    - show_usage(): Tampilkan petunjuk penggunaan.
+
+c.) Fungsi main
+```
+int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        download_and_extract();
+    } else if (argc == 3 && strcmp(argv[1], "-m") == 0) {
+        if (strcmp(argv[2], "Filter") == 0) {
+            filter_files();
+        } else if (strcmp(argv[2], "Combine") == 0) {
+            combine_files();
+        } else if (strcmp(argv[2], "Decode") == 0) {
+            decode_file();
+        } else {
+            show_usage(argv[0]);
+        }
+    } else {
+        show_usage(argv[0]);
+    }
+    return 0;
+}
+```
+  - Jika tidak ada argumen (argc == 1), jalankan download_and_extract().
+  - Jika ada argumen -m diikuti mode (Filter, Combine, Decode), panggil fungsi sesuai mode.
+  - Jika argumen tidak valid, tampilkan petunjuk penggunaan.
+
+d.) Fungsi download_and_extract
+```
+void download_and_extract() {
+    if (is_directory_exists("Clues")) {
+        printf("Clues directory already exists. Skipping download.\n");
+        return;
+    }
+    // Download Clues.zip
+    char *wget_args[] = {"wget", "URL", "-O", "Clues.zip", NULL};
+    execute_command(wget_args);
+    // Ekstrak dan hapus zip
+    char *unzip_args[] = {"unzip", "Clues.zip", NULL};
+    execute_command(unzip_args);
+    char *rm_args[] = {"rm", "Clues.zip", NULL};
+    execute_command(rm_args);
+}
+```
+  - Download dan ekstrak clues.zip
+  - Cek apakah direktori Clues sudah ada.
+  - Gunakan wget untuk mengunduh file.
+  - Ekstrak dengan unzip dan hapus file zip.
+
+e.) Fungsi filter_files
+```
+void filter_files() {
+    if (!is_directory_exists("Clues")) {
+        printf("Clues directory missing. Run without arguments first.\n");
+        return;
+    }
+    mkdir("Filtered", 0755);
+    // Iterasi file di subdirektori Clues
+    // Filter file dengan format: [a-zA-Z0-9].txt
+    // Salin file yang memenuhi kriteria ke direktori Filtered
+}
+```
+  - Filter file dengan format nama X.txt (X = huruf/angka).
+  - Cek direktori Clues.
+  - Buat direktori Filtered.
+  - Salin file yang memenuhi kriteria.
+
+f.) Fungsi combine_files
+```
+void filter_files() {
+    if (!is_directory_exists("Clues")) {
+        printf("Clues directory missing. Run without arguments first.\n");
+        return;
+    }
+    mkdir("Filtered", 0755);
+}
+```
+  - Gabungkan file yang sudah difilter secara bergantian (huruf-angka).
+  - Cek direktori Filtered.
+  - Gabungkan isi file dengan urutan: A.txt, 1.txt, B.txt, 2.txt, dst.
+
+g.) Fungsi decode_file
+```
+void decode_file() {
+    if (!is_file_exists("Combined.txt")) {
+        printf("Combined.txt missing. Run combine mode first.\n");
+        return;
+    }
+    // Baca Combined.txt, terapkan ROT13 (geser huruf 13 posisi).
+    // Simpan hasil ke Decoded.txt.
+}
+```
+  - Dekode isi Combined.txt menggunakan algoritma ROT13.
+  - Menggeser setiap huruf sebanyak 13 posisi misal A ke N, dan lain lain.
+
+h.) Fungsi Pendukung
+```
+int is_directory_exists(const char *path) {
+    struct stat st;
+    return (stat(path, &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+void execute_command(char *argv[]) {
+    pid_t pid = fork();
+    if (pid == 0) execvp(argv[0], argv);  // Eksekusi di child process
+    else waitpid(pid, NULL, 0);           // Tunggu child selesai
+}
+```
+  - is_directory_exists: Cek apakah path adalah direktori.
+  - execute_command: Jalankan perintah shell menggunakan fork() dan execvp().
+
+i.) Fungsi show_usage
+```
+void show_usage(char *program_name) {
+    printf("Usage:\n");
+    printf("  %s                  : Download and extract Clues.zip\n", program_name);
+    printf("  %s -m Filter        : Filter files\n", program_name);
+    printf("  %s -m Combine       : Combine files\n", program_name);
+    printf("  %s -m Decode        : Decode with ROT13\n", program_name);
+}
+```
+  - Tampilkan cara penggunaan program.
 
 
 
