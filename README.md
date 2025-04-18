@@ -12,6 +12,10 @@ Anggota Kelompok
   - [Soal 2](#soal-2)
   - [Soal 3](#soal-3)
   - [Soal 4](#soal-4)
+
+### Soal 2**
+a. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah melakukan unzip.
+b. mendeycrp
  
 ### Soal 4**
 a. ./debugmon list <user> akan menampilkan daftar semua proses yang sedang berjalan pada user tersebut  beserta PID, command, CPU usage, dan memory usage.
