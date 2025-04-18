@@ -403,8 +403,238 @@ void show_usage(char *program_name) {
 
 ### Soal 2**
 a&b. mendowload, unzip sebuah file acak dan menghapus file zip asli setelah melakukan unzip.& mendecrypt nama file yang ada di dalamnya.
+```
+ void download_zip() {
+     printf("[*] Downloading ZIP...\n");
+     char *argv[] = {
+         "wget", "--no-check-certificate", "-q",
+         "-O", (char *)ZIP_FILE,
+         (char *)("https://drive.google.com/uc?export=download&id=" FILE_ID),
+         NULL
+     };
+     run_command(argv);
+ }
+ 
+ void unzip_file() {
+     printf("[*] Unzipping ZIP...\n");
+     char *mkdir_argv[] = { "mkdir", "-p", (char *)EXTRACT_DIR, NULL };
+     run_command(mkdir_argv);
+ 
+     char *unzip_argv[] = { "unzip", "-o", (char *)ZIP_FILE, "-d", (char *)EXTRACT_DIR, NULL };
+     run_command(unzip_argv);
+ }
+ 
+ void delete_zip() {
+     printf("[*] Deleting ZIP file...\n");
+     char *rm_argv[] = { "rm", "-f", (char *)ZIP_FILE, NULL };
+     run_command(rm_argv);
+ }
+ int base64_char(char c) {
+     if ('A' <= c && c <= 'Z') return c - 'A';
+     if ('a' <= c && c <= 'z') return c - 'a' + 26;
+     if ('0' <= c && c <= '9') return c - '0' + 52;
+     if (c == '+') return 62;
+     if (c == '/') return 63;
+     return -1;
+ }
+ 
+ int base64_decode(const char *input, unsigned char *output) {
+     int len = strlen(input);
+     int out_len = 0, val = 0, valb = -8;
+ 
+     for (int i = 0; i < len; i++) {
+         if (input[i] == '=') break;
+         int c = base64_char(input[i]);
+         if (c == -1) return -1;
+         val = (val << 6) + c;
+         valb += 6;
+         if (valb >= 0) {
+             output[out_len++] = (val >> valb) & 0xFF;
+             valb -= 8;
+         }
+     }
+     output[out_len] = '\0';
+     return out_len;
+ }
+ 
+  void decrypt_and_move_files() {
+     mkdir(QUARANTINE_DIR, 0755);
+ 
+     DIR *dir = opendir(EXTRACT_DIR);
+     if (!dir) exit(EXIT_FAILURE);
+ 
+     struct dirent *entry;
+     char src_path[512], dst_path[512];
+     unsigned char decoded[256];
+ 
+     while ((entry = readdir(dir)) != NULL) {
+         if (entry->d_type != DT_REG) continue;
+ 
+         int len = strlen(entry->d_name);
+         if (len % 4 != 0) continue;
+ 
+         int valid = 1;
+         for (int i = 0; i < len; i++) {
+             char c = entry->d_name[i];
+             if (!(isalnum(c) || c == '+' || c == '/' || c == '=')) {
+                 valid = 0;
+                 break;
+             }
+         }
+         if (!valid) continue;
+ 
+         snprintf(src_path, sizeof(src_path), "%s/%s", EXTRACT_DIR, entry->d_name);
+         int out_len = base64_decode(entry->d_name, decoded);
+         if (out_len <= 0) continue;
+ 
+         if (decoded[out_len - 1] == '\n') decoded[out_len - 1] = '\0';
+ 
+         snprintf(dst_path, sizeof(dst_path), "%s/%s", QUARANTINE_DIR, decoded);
+         rename(src_path, dst_path);
+     }
+ 
+     closedir(dir);
+ }
+ 
+```
+![Screenshot 2025-04-18 220752](https://github.com/user-attachments/assets/9e4002f1-43b0-4c8a-a22e-de24ca131a38)
+![Screenshot 2025-04-18 220807](https://github.com/user-attachments/assets/ccb7e456-d31d-424a-995d-b88b61934514)
+
 c.memindahkan file yang ada pada directory starter kit ke directory karantina, dan begitu juga sebaliknya.
+```
+ void move_files(const char *src_dir, const char *dst_dir) {
+     mkdir(dst_dir, 0755);
+ 
+     DIR *src = opendir(src_dir);
+     if (!src) {
+         fprintf(stderr, "[!] Source directory '%s' not found.\n", src_dir);
+         return;
+     }
+ 
+     struct dirent *entry;
+     char src_path[512], dst_path[512], log_msg[1024];
+ 
+     while ((entry = readdir(src)) != NULL) {
+         if (entry->d_type != DT_REG) continue;
+ 
+         snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
+         snprintf(dst_path, sizeof(dst_path), "%s/%s", dst_dir, entry->d_name);
+ 
+         if (rename(src_path, dst_path) == 0) {
+             snprintf(log_msg, sizeof(log_msg),
+                      "%s - Successfully moved to %s directory.",
+                      entry->d_name,
+                      strcmp(dst_dir, QUARANTINE_DIR) == 0 ? "quarantine" : "starter kit");
+             write_log(log_msg);
+         }
+     }
+ 
+     closedir(src);
+ }
+ 
+ 
+ void quarantine_files() {
+     move_files(EXTRACT_DIR, QUARANTINE_DIR);
+ }
+ 
+```
+![Screenshot 2025-04-18 221108](https://github.com/user-attachments/assets/4c040db4-57b6-488d-95bb-97c7e91b2023)
+![Screenshot 2025-04-18 221224](https://github.com/user-attachments/assets/eb217164-0baf-48b5-9278-c354c88693c5)
+
 d. menghapus seluruh file yang ada di dalam directory karantina.
+```
+ void return_files() {
+     move_files(QUARANTINE_DIR, EXTRACT_DIR);
+ }
+ void eradicate_files() {
+     DIR *dir = opendir(QUARANTINE_DIR);
+     if (!dir) {
+         fprintf(stderr, "[!] Cannot open quarantine directory\n");
+         return;
+     }
+ 
+     struct dirent *entry;
+     char path[512], log_msg[1024];
+ 
+     while ((entry = readdir(dir)) != NULL) {
+         if (entry->d_type != DT_REG) continue;
+ 
+         snprintf(path, sizeof(path), "%s/%s", QUARANTINE_DIR, entry->d_name);
+         if (remove(path) == 0) {
+             snprintf(log_msg, sizeof(log_msg), "%s - Successfully deleted.", entry->d_name);
+             write_log(log_msg);
+         }
+     }
+ 
+     closedir(dir);
+ }
+ 
+```
+![Screenshot 2025-04-18 221833](https://github.com/user-attachments/assets/4bb299ff-c3c2-496e-bf35-98ce086d2937)
+
+e.mamatikan secara aman berdasarkan PID dari proses program tersebut.
+```
+ void shutdown_daemon() {
+     FILE *fp = fopen(PID_FILE, "r");
+     if (!fp) {
+         fprintf(stderr, "[!] PID file not found. Daemon might not be running.\n");
+         return;
+     }
+ 
+     pid_t pid;
+     fscanf(fp, "%d", &pid);
+     fclose(fp);
+ 
+     if (kill(pid, SIGTERM) == 0) {
+         char msg[128];
+         snprintf(msg, sizeof(msg), "Successfully shut off decryption process with PID %d.", pid);
+         write_log(msg);
+         remove(PID_FILE);
+     } else {
+         perror("[!] Failed to kill daemon");
+     }
+ }
+```
+![Screenshot 2025-04-18 222836](https://github.com/user-attachments/assets/d889038d-44ec-442b-ab23-1e5fa26b8bda)
+
+f.mbahkan error handling sederhana untuk mencegah penggunaan yang salah pada program tersebut.
+```
+ 
+ void print_usage() {
+     printf("Usage:\n");
+     printf("  ./starterkit                 : Download & setup starter kit\n");
+     printf("  ./starterkit --decrypt       : Jalankan daemon untuk mendekripsi nama file terenkripsi\n");
+     printf("  ./starterkit --shutdown      : Hentikan daemon decrypt\n");
+     printf("  ./starterkit --quarantine    : Pindahkan file dari starter_kit ke karantina\n");
+     printf("  ./starterkit --return        : Pindahkan file dari karantina ke starter_kit\n");
+     printf("  ./starterkit --eradicate     : Hapus seluruh file di direktori karantina\n");
+ }
+ } else {
+         fprintf(stderr, "[!] Invalid argument: %s\n", argv[1]);
+         print_usage();
+```
+![Screenshot 2025-04-18 223134](https://github.com/user-attachments/assets/3e4474db-f1ed-4d3a-9a09-d7a1f7dec3a9)
+
+g.menambahkan log dari setiap penggunaan program ini dan menyimpannya ke dalam file bernama activity.log.
+```
+ void write_log(const char *message) {
+     FILE *fp = fopen(LOG_FILE, "a");
+     if (!fp) return;
+ 
+     time_t now = time(NULL);
+     struct tm *t = localtime(&now);
+     char timestamp[32];
+     strftime(timestamp, sizeof(timestamp), "[%d-%m-%Y][%H:%M:%S]", t);
+ 
+     fprintf(fp, "%s - %s\n", timestamp, message);
+     fclose(fp);
+ }
+```
+![Screenshot 2025-04-18 223930](https://github.com/user-attachments/assets/82778fe2-086b-4b70-b1ac-64f0206e4fba)
+
+ # revisi 
+ -Successfully deleted.
+ ![Screenshot 2025-04-18 225045](https://github.com/user-attachments/assets/236fe565-2d28-4de7-a041-7575a71251f4)
 
 ### Soal 3
 
