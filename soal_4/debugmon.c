@@ -11,11 +11,10 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/sysinfo.h>
 
 #define LOGF "debugmon.log"
 #define PROC "/proc"
-
-int mode_fail = 0;
 
 uid_t cari_uid(const char *user) {
     struct passwd *p = getpwnam(user);
@@ -60,10 +59,8 @@ void jd_daemon() {
     pid_t p = fork();
     if (p < 0) exit(1);
     if (p > 0) exit(0);
-
     setsid();
     umask(0);
-
     chdir("/home/ywwzz/Sisop-2-2025-IT36/soal_4");
 
     close(STDIN_FILENO);
@@ -158,27 +155,10 @@ void stop_mon(const char *user) {
 
         if (!strstr(real, "debugmon")) continue;
 
-        snprintf(path, sizeof(path), PROC"/%d/cmdline", pid);
-        f = fopen(path, "r");
-        if (!f) continue;
-        size_t r = fread(line, 1, sizeof(line) - 1, f);
-        fclose(f);
-        line[r] = '\0';
-
-        char *arg[10];
-        int a = 0;
-        char *p = line;
-        while (p < line + r && a < 10) {
-            arg[a++] = p;
-            p += strlen(p) + 1;
-        }
-
-        if (a >= 3 && strstr(arg[0], "debugmon") && strcmp(arg[2], user) == 0) {
-            if (kill(pid, SIGTERM) == 0) {
-                printf("Stop debugmon (PID %d) user %s\n", pid, user);
-            } else {
-                perror("gagal stop");
-            }
+        if (kill(pid, SIGTERM) == 0) {
+            printf("Stop debugmon (PID %d) user %s\n", pid, user);
+        } else {
+            perror("gagal stop");
         }
     }
 
@@ -191,51 +171,73 @@ int main(int argc, char *argv[]) {
         DIR *d = opendir(PROC);
         if (!d) return 1;
 
+        struct sysinfo s_info;
+        sysinfo(&s_info);
+        double uptime = s_info.uptime;
+        long ticks_per_sec = sysconf(_SC_CLK_TCK);
+
         struct dirent *e;
         while ((e = readdir(d))) {
-            if (angka_doang(e->d_name)) {
-                int pid = atoi(e->d_name);
-                char path[256], line[256], nama[256] = "-";
-                FILE *f;
-                uid_t uidp;
-                double mem = 0;
+            if (!angka_doang(e->d_name)) continue;
 
-                snprintf(path, sizeof(path), PROC"/%d/status", pid);
-                f = fopen(path, "r");
-                if (!f) continue;
+            int pid = atoi(e->d_name);
+            char path[256], line[256], nama[256] = "-";
+            FILE *f;
+            uid_t uidp;
+            double mem = 0, cpu = 0;
 
-                while (fgets(line, sizeof(line), f)) {
-                    if (sscanf(line, "Uid: %d", &uidp) == 1) {
-                        if (uidp != uid) {
-                            fclose(f);
-                            goto next;
-                        }
+            snprintf(path, sizeof(path), PROC"/%d/status", pid);
+            f = fopen(path, "r");
+            if (!f) continue;
+
+            while (fgets(line, sizeof(line), f)) {
+                if (sscanf(line, "Uid: %d", &uidp) == 1) {
+                    if (uidp != uid) {
+                        fclose(f);
+                        goto next;
                     }
                 }
+            }
+            fclose(f);
+
+            snprintf(path, sizeof(path), PROC"/%d/comm", pid);
+            f = fopen(path, "r");
+            if (f) {
+                fgets(nama, sizeof(nama), f);
+                nama[strcspn(nama, "\n")] = 0;
+                fclose(f);
+            }
+
+            snprintf(path, sizeof(path), PROC"/%d/stat", pid);
+            f = fopen(path, "r");
+            if (f) {
+                long unsigned utime, stime, cutime, cstime, starttime;
+                fscanf(f, "%*d %*s %*c %*d %*d %*d %*d %*d "
+                        "%*u %*u %*u %*u %*u "
+                        "%lu %lu %lu %lu %*d %*d %*d %*d %*d %*d "
+                        "%*u %*u %*d %*d %*u %lu",
+                        &utime, &stime, &cutime, &cstime, &starttime);
                 fclose(f);
 
-                snprintf(path, sizeof(path), PROC"/%d/comm", pid);
-                f = fopen(path, "r");
-                if (f) {
-                    fgets(nama, sizeof(nama), f);
-                    nama[strcspn(nama, "\n")] = 0;
-                    fclose(f);
-                }
-
-                snprintf(path, sizeof(path), PROC"/%d/statm", pid);
-                f = fopen(path, "r");
-                if (f) {
-                    long pages;
-                    if (fscanf(f, "%ld", &pages) == 1) {
-                        long psize = sysconf(_SC_PAGE_SIZE) / 1024;
-                        mem = pages * psize;
-                    }
-                    fclose(f);
-                }
-
-                printf("PID: %d CMD: %s MEM: %.2f KB\n", pid, nama, mem);
+                long total_time = utime + stime + cutime + cstime;
+                double seconds = uptime - (starttime / (double)ticks_per_sec);
+                if (seconds > 0)
+                    cpu = 100.0 * ((total_time / (double)ticks_per_sec) / seconds);
             }
-        next:;
+
+            snprintf(path, sizeof(path), PROC"/%d/statm", pid);
+            f = fopen(path, "r");
+            if (f) {
+                long pages;
+                if (fscanf(f, "%ld", &pages) == 1) {
+                    long psize = sysconf(_SC_PAGE_SIZE) / 1024;
+                    mem = pages * psize;
+                }
+                fclose(f);
+            }
+
+            printf("PID: %d CMD: %s MEM: %.2f KB CPU: %.2f%%\n", pid, nama, mem, cpu);
+        next: ;
         }
 
         closedir(d);
@@ -245,9 +247,7 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3 && strcmp(argv[1], "fail") == 0) {
         jd_daemon();
         pantau(argv[2], 1);
-    } else if (argc == 3 && strcmp(argv[1], "stop") == 0) {
-        stop_mon(argv[2]);
-    } else if (argc == 3 && strcmp(argv[1], "revert") == 0) {
+    } else if (argc == 3 && strcmp(argv[1], "stop") == 0 || strcmp(argv[1], "revert") == 0) {
         stop_mon(argv[2]);
     } else {
         printf("Pake:\n");
